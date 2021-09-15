@@ -170,6 +170,10 @@ static const struct vk_ext vk_device_extensions[] = {
             PL_VK_DEV_FUN(GetImageDrmFormatModifierPropertiesEXT),
             {0}
         },
+#ifdef VK_KHR_portability_subset
+    }, {
+        .name = VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+#endif
     },
 };
 
@@ -189,15 +193,29 @@ const char * const pl_vulkan_recommended_extensions[] = {
     VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME,
     VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME,
     VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME,
+#ifdef VK_KHR_portability_subset
+    VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+#endif
 };
 
 const int pl_vulkan_num_recommended_extensions =
     PL_ARRAY_SIZE(pl_vulkan_recommended_extensions);
 
 // pNext chain of features we want enabled
+
+#ifdef VK_KHR_portability_subset
+static const VkPhysicalDevicePortabilitySubsetFeaturesKHR portability_subset = {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
+    .events = true,
+};
+#endif
+
 static const VkPhysicalDeviceHostQueryResetFeaturesEXT host_query_reset = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
     .hostQueryReset = true,
+#ifdef VK_KHR_portability_subset
+    .pNext = (void *) &portability_subset,
+#endif
 };
 
 const VkPhysicalDeviceFeatures2 pl_vulkan_recommended_features = {
@@ -1365,6 +1383,14 @@ pl_vulkan pl_vulkan_create(pl_log log, const struct pl_vulkan_params *params)
     }
 
     vk->disable_events = params->disable_events;
+
+#ifdef VK_KHR_portability_subset
+    const VkPhysicalDevicePortabilitySubsetFeaturesKHR *port_subset;
+    port_subset = vk_find_struct(&vk->features,
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR);
+    if (port_subset)
+        vk->disable_events |= !port_subset->events;
+#endif
 
     // Expose the resulting vulkan objects
     pl_vk->instance = vk->inst;

@@ -421,6 +421,14 @@ pl_gpu pl_gpu_create_vk(struct vk_ctx *vk)
         .pNext = &host_props,
     };
 
+#ifdef VK_KHR_portability_subset
+    VkPhysicalDevicePortabilitySubsetPropertiesKHR port_props = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_PROPERTIES_KHR,
+        .minVertexInputBindingStrideAlignment = 1,
+    };
+    vk_link_struct(&props, &port_props);
+#endif
+
     vk->GetPhysicalDeviceProperties2(vk->physd, &props);
 
     // Determine GLSL features and limits
@@ -480,6 +488,11 @@ pl_gpu pl_gpu_create_vk(struct vk_ctx *vk)
         .max_variables      = 0, // vulkan doesn't support these at all
         .max_constants      = SIZE_MAX,
         .max_pushc_size     = vk->limits.maxPushConstantsSize,
+#ifdef VK_KHR_portability_subset
+        .align_vertex_stride = port_props.minVertexInputBindingStrideAlignment,
+#else
+        .align_vertex_stride = 1,
+#endif
         .max_dispatch = {
             vk->limits.maxComputeWorkGroupCount[0],
             vk->limits.maxComputeWorkGroupCount[1],
