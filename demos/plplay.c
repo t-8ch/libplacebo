@@ -287,6 +287,7 @@ static void *decode_loop(void *arg)
     if (!frame || !packet)
         goto done;
 
+    float frame_duration = av_q2d(av_inv_q(p->stream->avg_frame_rate));
     double first_pts = 0.0, base_pts = 0.0, last_pts = 0.0;
     uint64_t num_frames = 0;
 
@@ -325,6 +326,7 @@ static void *decode_loop(void *arg)
             frame->opaque = p;
             pl_queue_push_block(p->queue, UINT64_MAX, &(struct pl_source_frame) {
                 .pts = last_pts - first_pts + base_pts,
+                .duration = frame_duration,
                 .map = map_frame,
                 .unmap = unmap_frame,
                 .discard = discard_frame,
@@ -423,7 +425,6 @@ static bool render_loop(struct plplay *p)
 {
     struct pl_queue_params qparams = {
         .radius = pl_frame_mix_radius(&p->params),
-        .frame_duration = av_q2d(av_inv_q(p->stream->avg_frame_rate)),
         .interpolation_threshold = 0.01,
         .timeout = UINT64_MAX,
     };
